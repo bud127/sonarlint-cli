@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.sonarlint.cli.report.ReportFactory;
+import org.sonarlint.cli.util.Logger;
 import org.sonarsource.sonarlint.core.client.api.common.RuleDetails;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.AnalysisResults;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.ClientInputFile;
@@ -48,7 +49,7 @@ public class StandaloneSonarLint extends SonarLint {
     IssueCollector collector = new IssueCollector();
     StandaloneAnalysisConfiguration config = new StandaloneAnalysisConfiguration(baseDirPath, baseDirPath.resolve(".sonarlint"),
       inputFiles, properties);
-    AnalysisResults result = engine.analyze(config, collector);
+    AnalysisResults result = engine.analyze(config, collector, new DefaultLogOutput(Logger.get(), true), null);
     Collection<Trackable> trackables = collector.get().stream().map(IssueTrackable::new).collect(Collectors.toList());
     generateReports(trackables, result, reportFactory, baseDirPath.getFileName().toString(), baseDirPath, start);
   }

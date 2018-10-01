@@ -37,132 +37,134 @@ import org.sonarlint.cli.util.Logger;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.ClientInputFile;
 
 public class InputFileFinder {
-  private static final String GLOB_PREFIX = "glob:";
-  private static final Logger LOGGER = Logger.get();
-  private final PathMatcher srcMatcher;
-  private final PathMatcher testsMatcher;
-  private final PathMatcher excludeMatcher;
-  private final Charset charset;
+	private static final String GLOB_PREFIX = "glob:";
+	private static final Logger LOGGER = Logger.get();
+	private final PathMatcher srcMatcher;
+	private final PathMatcher testsMatcher;
+	private final PathMatcher excludeMatcher;
+	private final Charset charset;
 
-  private static PathMatcher acceptAll = p -> true;
-  private static PathMatcher refuseAll = p -> false;
+	private static PathMatcher acceptAll = p -> true;
+	private static PathMatcher refuseAll = p -> false;
 
-  public InputFileFinder(@Nullable String srcGlobPattern, @Nullable String testsGlobPattern, @Nullable String excludeGlobPattern, Charset charset) {
-    this.charset = charset;
-    FileSystem fs = FileSystems.getDefault();
-    try {
-      if (srcGlobPattern != null) {
-        srcMatcher = fs.getPathMatcher(GLOB_PREFIX + srcGlobPattern);
-      } else {
-        srcMatcher = acceptAll;
-      }
-    } catch (Exception e) {
-      LOGGER.error("Error creating matcher for sources with pattern: " + srcGlobPattern);
-      throw e;
-    }
+	public InputFileFinder(@Nullable String srcGlobPattern, @Nullable String testsGlobPattern,
+			@Nullable String excludeGlobPattern, Charset charset) {
+		this.charset = charset;
+		FileSystem fs = FileSystems.getDefault();
+		try {
+			if (srcGlobPattern != null) {
+				srcMatcher = fs.getPathMatcher(GLOB_PREFIX + srcGlobPattern);
+			} else {
+				srcMatcher = acceptAll;
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error creating matcher for sources with pattern: " + srcGlobPattern);
+			throw e;
+		}
 
-    try {
-      if (testsGlobPattern != null) {
-        testsMatcher = fs.getPathMatcher(GLOB_PREFIX + testsGlobPattern);
-      } else {
-        testsMatcher = refuseAll;
-      }
-    } catch (Exception e) {
-      LOGGER.error("Error creating matcher for tests with pattern: " + testsGlobPattern);
-      throw e;
-    }
+		try {
+			if (testsGlobPattern != null) {
+				testsMatcher = fs.getPathMatcher(GLOB_PREFIX + testsGlobPattern);
+			} else {
+				testsMatcher = refuseAll;
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error creating matcher for tests with pattern: " + testsGlobPattern);
+			throw e;
+		}
 
-    try {
-      if (excludeGlobPattern != null) {
-        excludeMatcher = fs.getPathMatcher(GLOB_PREFIX + excludeGlobPattern);
-      } else {
-        excludeMatcher = refuseAll;
-      }
-    } catch (Exception e) {
-      LOGGER.error("Error creating matcher for exclusions with pattern: " + excludeGlobPattern);
-      throw e;
-    }
-  }
+		try {
+			if (excludeGlobPattern != null) {
+				excludeMatcher = fs.getPathMatcher(GLOB_PREFIX + excludeGlobPattern);
+			} else {
+				excludeMatcher = refuseAll;
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error creating matcher for exclusions with pattern: " + excludeGlobPattern);
+			throw e;
+		}
+	}
 
-  public List<ClientInputFile> collect(Path dir) throws IOException {
-    final List<ClientInputFile> files = new ArrayList<>();
-    Files.walkFileTree(dir, new FileCollector(dir, files));
-    return files;
-  }
+	public List<ClientInputFile> collect(Path dir) throws IOException {
+		final List<ClientInputFile> files = new ArrayList<>();
+		Files.walkFileTree(dir, new FileCollector(dir, files));
+		return files;
+	}
 
-  private class FileCollector extends SimpleFileVisitor<Path> {
-    private final List<ClientInputFile> files;
-    private final Path baseDir;
+	private class FileCollector extends SimpleFileVisitor<Path> {
+		private final List<ClientInputFile> files;
+		private final Path baseDir;
 
-    private FileCollector(Path baseDir, List<ClientInputFile> files) {
-      this.baseDir = baseDir;
-      this.files = files;
-    }
+		private FileCollector(Path baseDir, List<ClientInputFile> files) {
+			this.baseDir = baseDir;
+			this.files = files;
+		}
 
-    @Override
-    public FileVisitResult visitFile(final Path file, BasicFileAttributes attrs) throws IOException {
-      Path absoluteFilePath = file;
-      Path relativeFilePath = baseDir.relativize(absoluteFilePath);
-      boolean isSrc = srcMatcher.matches(absoluteFilePath) || srcMatcher.matches(relativeFilePath);
-      boolean isExcluded = excludeMatcher.matches(absoluteFilePath) || excludeMatcher.matches(relativeFilePath);
-      if (isSrc && !isExcluded) {
-        boolean isTest = testsMatcher.matches(absoluteFilePath) || testsMatcher.matches(relativeFilePath);
-        files.add(new DefaultClientInputFile(absoluteFilePath, isTest, charset));
-      }
+		@Override
+		public FileVisitResult visitFile(final Path file, BasicFileAttributes attrs) throws IOException {
+			Path absoluteFilePath = file;
+			Path relativeFilePath = baseDir.relativize(absoluteFilePath);
+			boolean isSrc = srcMatcher.matches(absoluteFilePath) || srcMatcher.matches(relativeFilePath);
+			boolean isExcluded = excludeMatcher.matches(absoluteFilePath) || excludeMatcher.matches(relativeFilePath);
+			if (isSrc && !isExcluded) {
+				boolean isTest = testsMatcher.matches(absoluteFilePath) || testsMatcher.matches(relativeFilePath);
+				files.add(new DefaultClientInputFile(absoluteFilePath, isTest, charset));
+			}
 
-      return super.visitFile(absoluteFilePath, attrs);
-    }
+			return super.visitFile(absoluteFilePath, attrs);
+		}
 
-    @Override
-    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-      if (Files.isHidden(dir)) {
-        LOGGER.debug("Ignoring hidden directory: " + dir.toString());
-        return FileVisitResult.SKIP_SUBTREE;
-      }
+		@Override
+		public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+			if (Files.isHidden(dir)) {
+				LOGGER.debug("Ignoring hidden directory: " + dir.toString());
+				return FileVisitResult.SKIP_SUBTREE;
+			}
 
-      return super.preVisitDirectory(dir, attrs);
-    }
-  }
+			return super.preVisitDirectory(dir, attrs);
+		}
+	}
 
-  public static class DefaultClientInputFile implements ClientInputFile {
-    private final Path path;
-    private final boolean test;
-    private final Charset charset;
+	public static class DefaultClientInputFile implements ClientInputFile {
+		private final Path path;
+		private final boolean test;
+		private final Charset charset;
 
-    public DefaultClientInputFile(Path path, boolean test, Charset charset) {
-      this.path = path;
-      this.test = test;
-      this.charset = charset;
-    }
+		public DefaultClientInputFile(Path path, boolean test, Charset charset) {
+			this.path = path;
+			this.test = test;
+			this.charset = charset;
+		}
 
-    @Override
-    public boolean isTest() {
-      return test;
-    }
+		@Override
+		public boolean isTest() {
+			return test;
+		}
 
-    @Override
-    public String getPath() {
-      return path.toString();
-    }
+		@Override
+		public String getPath() {
+			return path.toString();
+		}
 
-    @Override
-    public Charset getCharset() {
-      return charset;
-    }
+		@Override
+		public Charset getCharset() {
+			return charset;
+		}
 
-    @Override
-    public <G> G getClientObject() {
-      return null;
-    }
+		@Override
+		public <G> G getClientObject() {
+			return null;
+		}
 
-    @Override
-    public InputStream inputStream() throws IOException {
-      return Files.newInputStream(path);
-    }
+		@Override
+		public InputStream inputStream() throws IOException {
+			return Files.newInputStream(path);
+		}
 
-    @Override
-    public String contents() throws IOException {
-      return new String(Files.readAllBytes(path), charset);
-    }
-  }
+		@Override
+		public String contents() throws IOException {
+			return new String(Files.readAllBytes(path), charset);
+		}
+
+	}
 }

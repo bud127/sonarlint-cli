@@ -210,6 +210,11 @@ public class IssuesReport {
     public String creationDate() {
       return creationDate;
     }
+
+	@Override
+	public String getType() {
+		return wrapped.getType();
+	}
   }
 
   private ResourceReport getOrCreate(Path filePath) {

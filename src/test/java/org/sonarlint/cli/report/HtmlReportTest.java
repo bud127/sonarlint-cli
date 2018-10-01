@@ -40,70 +40,72 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class HtmlReportTest {
-  private HtmlReport html;
-  private AnalysisResults result;
+	private HtmlReport html;
+	private AnalysisResults result;
 
-  @Rule
-  public TemporaryFolder temp = new TemporaryFolder();
-  private Path reportFile;
+	@Rule
+	public TemporaryFolder temp = new TemporaryFolder();
+	private Path reportFile;
 
-  @Before
-  public void setUp() {
-    result = mock(AnalysisResults.class);
-    when(result.fileCount()).thenReturn(1);
-    reportFile = temp.getRoot().toPath().resolve("report.html");
-    html = new HtmlReport(temp.getRoot().toPath(), reportFile, StandardCharsets.UTF_8);
-  }
+	@Before
+	public void setUp() {
+		result = mock(AnalysisResults.class);
+		when(result.fileCount()).thenReturn(1);
+		reportFile = temp.getRoot().toPath().resolve("report.html");
+		html = new HtmlReport(temp.getRoot().toPath(), reportFile, StandardCharsets.UTF_8);
+	}
 
-  @Test
-  public void testHtml() {
-    html.execute("project", new Date(), new LinkedList<>(), result, k -> null);
-  }
+	@Test
+	public void testHtml() {
+		html.execute("project", new Date(), new LinkedList<>(), result, k -> null);
+	}
 
-  @Test
-  public void testCopyRuleDesc() {
-    html.execute("project", new Date(), Arrays.asList(createTestIssue("foo", "squid:1234", "bla", "MAJOR", 1)), result,
-      k -> "squid:1234".equals(k) ? mockRuleDetails() : null);
+	@Test
+	public void testCopyRuleDesc() {
+		html.execute("project", new Date(), Arrays.asList(createTestIssue("foo", "squid:1234", "bla", "MAJOR", 1)),
+				result, k -> "squid:1234".equals(k) ? mockRuleDetails() : null);
 
-    assertThat(reportFile.getParent().resolve("sonarlintreport_rules/rule.css").toFile()).exists();
-    assertThat(reportFile.getParent().resolve("sonarlintreport_rules/squid_1234.html").toFile()).usingCharset(StandardCharsets.UTF_8).hasContent(
-      "<!doctype html><html><head><link href=\"rule.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><h1><big>Foo</big> (squid:1234)</h1><div class=\"rule-desc\">foo bar</div></body></html>");
-  }
+		assertThat(reportFile.getParent().resolve("sonarlintreport_rules/rule.css").toFile()).exists();
+		assertThat(reportFile.getParent().resolve("sonarlintreport_rules/squid_1234.html").toFile())
+				.usingCharset(StandardCharsets.UTF_8).hasContent(
+						"<!doctype html><html><head><link href=\"rule.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><h1><big>Foo</big> (squid:1234)</h1><div class=\"rule-desc\">foo bar</div></body></html>");
+	}
 
-  @Test
-  public void testExtendedDesc() {
-    RuleDetails mockRuleDetailsWithExtendedDesc = mockRuleDetails();
-    when(mockRuleDetailsWithExtendedDesc.getExtendedDescription()).thenReturn("bar baz");
+	@Test
+	public void testExtendedDesc() {
+		RuleDetails mockRuleDetailsWithExtendedDesc = mockRuleDetails();
+		when(mockRuleDetailsWithExtendedDesc.getExtendedDescription()).thenReturn("bar baz");
 
-    html.execute("project", new Date(), Arrays.asList(createTestIssue("foo", "squid:1234", "bla", "MAJOR", 1)), result,
-      k -> "squid:1234".equals(k) ? mockRuleDetailsWithExtendedDesc : null);
+		html.execute("project", new Date(), Arrays.asList(createTestIssue("foo", "squid:1234", "bla", "MAJOR", 1)),
+				result, k -> "squid:1234".equals(k) ? mockRuleDetailsWithExtendedDesc : null);
 
-    assertThat(reportFile.getParent().resolve("sonarlintreport_rules/rule.css").toFile()).exists();
-    assertThat(reportFile.getParent().resolve("sonarlintreport_rules/squid_1234.html").toFile()).usingCharset(StandardCharsets.UTF_8).hasContent(
-      "<!doctype html><html><head><link href=\"rule.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><h1><big>Foo</big> (squid:1234)</h1><div class=\"rule-desc\">foo bar\n<div>bar baz</div></div></body></html>");
-  }
+		assertThat(reportFile.getParent().resolve("sonarlintreport_rules/rule.css").toFile()).exists();
+		assertThat(reportFile.getParent().resolve("sonarlintreport_rules/squid_1234.html").toFile())
+				.usingCharset(StandardCharsets.UTF_8).hasContent(
+						"<!doctype html><html><head><link href=\"rule.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><h1><big>Foo</big> (squid:1234)</h1><div class=\"rule-desc\">foo bar\n<div>bar baz</div></div></body></html>");
+	}
 
-  private RuleDetails mockRuleDetails() {
-    RuleDetails ruleDetails = mock(RuleDetails.class);
-    when(ruleDetails.getName()).thenReturn("Foo");
-    when(ruleDetails.getHtmlDescription()).thenReturn("foo bar");
-    when(ruleDetails.getExtendedDescription()).thenReturn("");
-    return ruleDetails;
-  }
+	private RuleDetails mockRuleDetails() {
+		RuleDetails ruleDetails = mock(RuleDetails.class);
+		when(ruleDetails.getName()).thenReturn("Foo");
+		when(ruleDetails.getHtmlDescription()).thenReturn("foo bar");
+		when(ruleDetails.getExtendedDescription()).thenReturn("");
+		return ruleDetails;
+	}
 
-  private static Trackable createTestIssue(String filePath, String ruleKey, String name, String severity, int line) {
-    ClientInputFile inputFile = mock(ClientInputFile.class);
-    when(inputFile.getPath()).thenReturn(filePath);
+	private static Trackable createTestIssue(String filePath, String ruleKey, String name, String severity, int line) {
+		ClientInputFile inputFile = mock(ClientInputFile.class);
+		when(inputFile.getPath()).thenReturn(filePath);
 
-    Issue issue = mock(Issue.class);
-    when(issue.getStartLine()).thenReturn(line);
-    when(issue.getStartLineOffset()).thenReturn(null);
-    when(issue.getEndLine()).thenReturn(line);
-    when(issue.getEndLineOffset()).thenReturn(null);
-    when(issue.getRuleName()).thenReturn(name);
-    when(issue.getInputFile()).thenReturn(inputFile);
-    when(issue.getRuleKey()).thenReturn(ruleKey);
-    when(issue.getSeverity()).thenReturn(severity);
-    return new IssueTrackable(issue);
-  }
+		Issue issue = mock(Issue.class);
+		when(issue.getStartLine()).thenReturn(line);
+		when(issue.getStartLineOffset()).thenReturn(null);
+		when(issue.getEndLine()).thenReturn(line);
+		when(issue.getEndLineOffset()).thenReturn(null);
+		when(issue.getRuleName()).thenReturn(name);
+		when(issue.getInputFile()).thenReturn(inputFile);
+		when(issue.getRuleKey()).thenReturn(ruleKey);
+		when(issue.getSeverity()).thenReturn(severity);
+		return new IssueTrackable(issue);
+	}
 }

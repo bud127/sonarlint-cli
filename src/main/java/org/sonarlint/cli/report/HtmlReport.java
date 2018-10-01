@@ -67,7 +67,7 @@ public class HtmlReport implements Reporter {
     }
     report.setTitle(projectName);
     report.setDate(date);
-    report.setFilesAnalyzed(result.fileCount());
+    report.setFilesAnalyzed(result.failedAnalysisFiles().size());
     copyRuleHtmlDescriptions(ruleDescriptionProducer, report);
     print(report);
   }

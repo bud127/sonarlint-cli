@@ -92,17 +92,17 @@ public class ConnectedSonarLint extends SonarLint {
     ModuleStorageStatus moduleStorageStatus = engine.getModuleStorageStatus(moduleKey);
     if (moduleStorageStatus == null) {
       LOGGER.info("Updating data for module..");
-      engine.updateModule(getServerConfiguration(server), moduleKey);
+      engine.updateModule(getServerConfiguration(server), moduleKey, null);
       LOGGER.info("Module updated");
     } else if (moduleStorageStatus.isStale()) {
       LOGGER.info("Module's data is stale. Updating..");
-      engine.updateModule(getServerConfiguration(server), moduleKey);
+      engine.updateModule(getServerConfiguration(server), moduleKey, null);
       LOGGER.info("Module updated");
     }
   }
 
   private void update() {
-    engine.update(getServerConfiguration(server));
+    engine.update(getServerConfiguration(server), null);
     engine.allModulesByKey().keySet().stream()
       .filter(key -> key.equals(moduleKey))
       .findAny()
@@ -112,7 +112,7 @@ public class ConnectedSonarLint extends SonarLint {
   }
 
   private void updateModule() {
-    engine.updateModule(getServerConfiguration(server), moduleKey);
+    engine.updateModule(getServerConfiguration(server), moduleKey, null);
   }
 
   private static ServerConfiguration getServerConfiguration(SonarQubeServer server) {
@@ -135,7 +135,7 @@ public class ConnectedSonarLint extends SonarLint {
     ConnectedAnalysisConfiguration config = new ConnectedAnalysisConfiguration(moduleKey, baseDirPath, baseDirPath.resolve(".sonarlint"),
       inputFiles, properties);
     IssueCollector collector = new IssueCollector();
-    AnalysisResults result = engine.analyze(config, collector);
+    AnalysisResults result = engine.analyze(config, collector, new DefaultLogOutput(LOGGER, true), null);
     engine.downloadServerIssues(getServerConfiguration(server), moduleKey);
     Collection<Trackable> trackables = matchAndTrack(baseDirPath, collector.get());
     generateReports(trackables, result, reportFactory, baseDirPath.getFileName().toString(), baseDirPath, start);

@@ -66,7 +66,7 @@ public abstract class SonarLint {
   public abstract void stop();
 
   protected void generateReports(Collection<Trackable> trackables, AnalysisResults result, ReportFactory reportFactory, String projectName, Path baseDir, Date date) {
-    List<Reporter> reporters = reportFactory.createReporters(baseDir);
+	  List<Reporter> reporters = reportFactory.createReporters(baseDir);
 
     for (Reporter r : reporters) {
       r.execute(projectName, date, trackables, result, this::getRuleDetails);
